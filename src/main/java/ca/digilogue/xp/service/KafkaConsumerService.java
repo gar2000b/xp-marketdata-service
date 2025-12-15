@@ -50,7 +50,7 @@ public class KafkaConsumerService {
                 App.latestCandles.putAll(candles);
             }
 
-            log.debug("Consumed and updated {} candles from topic: {}, partition: {}, offset: {}", 
+            log.info("Consumed and updated {} candles from topic: {}, partition: {}, offset: {}", 
                 candles.size(), topic, partition, offset);
 
             // Acknowledge the message (if manual acknowledgment is enabled)
