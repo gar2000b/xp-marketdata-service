@@ -20,6 +20,8 @@ import java.util.Map;
  * Kafka configuration for consuming OHLCV candles collection.
  * Consumes the entire Map<String, OhlcvCandle> as a single JSON message from the ohlcv-topic.
  * Uses custom CandlesMapDeserializer for proper Map deserialization.
+ * 
+ * Configured for live streaming: always consumes NEW messages as they arrive.
  */
 @Configuration
 public class KafkaConfig {
@@ -38,16 +40,21 @@ public class KafkaConfig {
         configProps.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
         configProps.put(ConsumerConfig.GROUP_ID_CONFIG, groupId);
         configProps.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class);
-        // VALUE_DESERIALIZER_CLASS_CONFIG is not needed when using custom deserializer instance
         
-        // Consumer settings
-        // Always start from latest offset (ignore committed offsets)
-        // By disabling auto-commit, no offsets are saved, so every restart starts from latest
+        // Consumer settings for live streaming
+        // Always start from latest offset - consume NEW messages as they arrive
         configProps.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "latest");
         configProps.put(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, false);
         
-        log.info("Creating ConsumerFactory with bootstrap-servers: {}, group-id: {}, auto-offset-reset: latest", 
-                bootstrapServers, groupId);
+        // Session and heartbeat timeouts
+        configProps.put(ConsumerConfig.SESSION_TIMEOUT_MS_CONFIG, 30000);
+        configProps.put(ConsumerConfig.HEARTBEAT_INTERVAL_MS_CONFIG, 3000);
+        
+        log.info("Creating ConsumerFactory for live streaming:");
+        log.info("  bootstrap-servers: {}", bootstrapServers);
+        log.info("  group-id: {}", groupId);
+        log.info("  auto-offset-reset: latest (consume NEW messages only)");
+        log.info("  enable-auto-commit: false (no offset commits)");
         
         // Use custom deserializer for Map<String, OhlcvCandle>
         CandlesMapDeserializer candlesMapDeserializer = new CandlesMapDeserializer();
@@ -67,6 +74,7 @@ public class KafkaConfig {
         factory.getContainerProperties().setAckMode(ContainerProperties.AckMode.MANUAL_IMMEDIATE);
         
         log.info("Created kafkaListenerContainerFactory with manual acknowledgment mode");
+        log.info("Container will consume messages from ohlcv-topic as they arrive");
         
         return factory;
     }
