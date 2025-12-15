@@ -11,14 +11,14 @@
 
   <groupId>ca.digilogue.xp</groupId>
   <artifactId>xp-marketdata-service</artifactId>
-  <version>0.0.15</version>
+  <version>0.0.16-SNAPSHOT</version>
   <name>xp-marketdata-service</name>
   <description>XP Market Data Spring Boot microservice</description>
 
   <scm>
     <connection>scm:git:https://github.com/gar2000b/xp-marketdata-service.git</connection>
     <developerConnection>scm:git:https://github.com/gar2000b/xp-marketdata-service.git</developerConnection>
-    <tag>v0.0.15</tag>
+    <tag>v0.0.5</tag>
   </scm>
 
   <packaging>jar</packaging>
