@@ -7,6 +7,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.info.BuildProperties;
 import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.beans.factory.NoSuchBeanDefinitionException;
+import org.springframework.kafka.annotation.EnableKafka;
 
 import java.nio.file.Files;
 import java.nio.file.Paths;
@@ -17,6 +18,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import ca.digilogue.xp.generator.OhlcvCandle;
 
 @SpringBootApplication
+@EnableKafka
 public class App {
 
     public static String version;
