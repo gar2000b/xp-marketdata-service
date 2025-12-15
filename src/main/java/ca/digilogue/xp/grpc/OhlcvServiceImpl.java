@@ -2,7 +2,6 @@ package ca.digilogue.xp.grpc;
 
 import ca.digilogue.xp.App;
 import ca.digilogue.xp.generator.OhlcvCandle;
-import ca.digilogue.xp.generator.OhlcvGenerator;
 import io.grpc.stub.StreamObserver;
 import net.devh.boot.grpc.server.service.GrpcService;
 import org.slf4j.Logger;
@@ -26,27 +25,14 @@ public class OhlcvServiceImpl extends OhlcvServiceGrpc.OhlcvServiceImplBase {
         log.debug("Received request for latest candle: symbol={}", symbol);
 
         try {
-            // Get the generator for the requested symbol
-            OhlcvGenerator generator = App.getGenerator(symbol);
-
-            if (generator == null) {
-                log.warn("Generator not found for symbol: {}", symbol);
-                responseObserver.onError(
-                    io.grpc.Status.NOT_FOUND
-                        .withDescription("No generator found for symbol: " + symbol)
-                        .asRuntimeException()
-                );
-                return;
-            }
-
-            // Get the latest candle from the generator
-            OhlcvCandle candle = generator.getLatestCandle();
+            // Get the latest candle from the latestCandles map (consumed from Kafka)
+            OhlcvCandle candle = App.latestCandles.get(symbol);
 
             if (candle == null) {
-                log.warn("No candle data available yet for symbol: {}", symbol);
+                log.warn("No candle data available for symbol: {}", symbol);
                 responseObserver.onError(
                     io.grpc.Status.NOT_FOUND
-                        .withDescription("No candle data available yet for symbol: " + symbol)
+                        .withDescription("No candle data available for symbol: " + symbol)
                         .asRuntimeException()
                 );
                 return;
@@ -99,25 +85,25 @@ public class OhlcvServiceImpl extends OhlcvServiceGrpc.OhlcvServiceImplBase {
                         }
                     }
 
-                    // Collect all latest candles from all generators
-                    java.util.List<OhlcvGenerator> generators = App.getGenerators();
+                    // Collect all latest candles from latestCandles map (consumed from Kafka)
                     OhlcvServiceProto.AllCandlesResponse.Builder responseBuilder =
                             OhlcvServiceProto.AllCandlesResponse.newBuilder();
 
-                    for (OhlcvGenerator generator : generators) {
-                        OhlcvCandle candle = generator.getLatestCandle();
-                        if (candle != null) {
-                            OhlcvServiceProto.OhlcvCandleResponse candleResponse =
-                                    OhlcvServiceProto.OhlcvCandleResponse.newBuilder()
-                                            .setSymbol(candle.getSymbol())
-                                            .setOpen(candle.getOpen())
-                                            .setHigh(candle.getHigh())
-                                            .setLow(candle.getLow())
-                                            .setClose(candle.getClose())
-                                            .setVolume(candle.getVolume())
-                                            .setTimestamp(convertInstantToNanos(candle.getTimestamp()))
-                                            .build();
-                            responseBuilder.addCandles(candleResponse);
+                    synchronized (App.latestCandles) {
+                        for (OhlcvCandle candle : App.latestCandles.values()) {
+                            if (candle != null) {
+                                OhlcvServiceProto.OhlcvCandleResponse candleResponse =
+                                        OhlcvServiceProto.OhlcvCandleResponse.newBuilder()
+                                                .setSymbol(candle.getSymbol())
+                                                .setOpen(candle.getOpen())
+                                                .setHigh(candle.getHigh())
+                                                .setLow(candle.getLow())
+                                                .setClose(candle.getClose())
+                                                .setVolume(candle.getVolume())
+                                                .setTimestamp(convertInstantToNanos(candle.getTimestamp()))
+                                                .build();
+                                responseBuilder.addCandles(candleResponse);
+                            }
                         }
                     }
 

@@ -89,7 +89,11 @@
       <artifactId>spring-kafka</artifactId>
     </dependency>
 
-    <!-- Jackson 3 is included by default in Spring Boot 4.0 via spring-boot-starter-web -->
+    <!-- Jackson 3 for JSON deserialization (included by Spring Boot 4.0 but explicit for custom deserializer) -->
+    <dependency>
+      <groupId>com.fasterxml.jackson.core</groupId>
+      <artifactId>jackson-databind</artifactId>
+    </dependency>
 
     <!-- gRPC Dependencies -->
     <!-- gRPC Spring Boot Starter (server and client support) -->
