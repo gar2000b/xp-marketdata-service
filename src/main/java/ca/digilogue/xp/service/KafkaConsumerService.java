@@ -32,7 +32,13 @@ public class KafkaConsumerService {
 
     @PostConstruct
     public void init() {
-        log.info("KafkaConsumerService initialized - listening to topic: '{}' with group-id: '{}'", topicName, groupId);
+        log.info("========================================");
+        log.info("KafkaConsumerService initialized");
+        log.info("  Topic: '{}'", topicName);
+        log.info("  Group ID: '{}'", groupId);
+        log.info("  Container Factory: 'kafkaListenerContainerFactory'");
+        log.info("  Auto-offset-reset: latest (will only consume NEW messages after consumer starts)");
+        log.info("========================================");
     }
 
     /**
