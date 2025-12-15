@@ -95,6 +95,12 @@
       <artifactId>jackson-databind</artifactId>
     </dependency>
 
+    <!-- Jackson JSR310 module for Java 8 time types (Instant, LocalDateTime, etc.) -->
+    <dependency>
+      <groupId>com.fasterxml.jackson.datatype</groupId>
+      <artifactId>jackson-datatype-jsr310</artifactId>
+    </dependency>
+
     <!-- gRPC Dependencies -->
     <!-- gRPC Spring Boot Starter (server and client support) -->
     <dependency>
