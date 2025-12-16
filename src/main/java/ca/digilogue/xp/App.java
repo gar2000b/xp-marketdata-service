@@ -1,28 +1,32 @@
 package ca.digilogue.xp;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.boot.SpringApplication;
-import org.springframework.boot.autoconfigure.SpringBootApplication;
-import org.springframework.boot.info.BuildProperties;
-import org.springframework.context.ConfigurableApplicationContext;
-import org.springframework.beans.factory.NoSuchBeanDefinitionException;
-import org.springframework.kafka.annotation.EnableKafka;
-
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.NoSuchBeanDefinitionException;
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.boot.info.BuildProperties;
+import org.springframework.context.ConfigurableApplicationContext;
+import org.springframework.kafka.annotation.EnableKafka;
+import org.springframework.scheduling.annotation.EnableScheduling;
+
 import ca.digilogue.xp.generator.OhlcvCandle;
+import ca.digilogue.xp.service.ConsumerGroupLeaseService;
 
 @SpringBootApplication
 @EnableKafka
+@EnableScheduling
 public class App {
 
     public static String version;
     public static String instanceId;
+    public static String acquiredConsumerGroupName; // Set after lease acquisition
 
     private static final Logger log = LoggerFactory.getLogger(App.class);
     private static ConfigurableApplicationContext applicationContext;
@@ -36,6 +40,29 @@ public class App {
         instanceId = resolveInstanceId();
 
         log.info("xp-marketdata-service is running @ version: {}, instanceId: {}", version, instanceId);
+        
+        // Register shutdown hook to release lease
+        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+            log.info("Shutting down - releasing consumer group lease...");
+            releaseConsumerGroupLease();
+        }));
+    }
+    
+    /**
+     * Releases the consumer group lease on shutdown.
+     */
+    private static void releaseConsumerGroupLease() {
+        try {
+            ConsumerGroupLeaseService leaseService = applicationContext.getBean(ConsumerGroupLeaseService.class);
+            boolean released = leaseService.releaseLease();
+            if (released) {
+                log.info("Successfully released consumer group lease for instance: {}", instanceId);
+            } else {
+                log.warn("No lease found to release for instance: {}", instanceId);
+            }
+        } catch (Exception e) {
+            log.error("Error releasing consumer group lease for instance: {}", instanceId, e);
+        }
     }
 
     private static String resolveVersion(ConfigurableApplicationContext ctx) {

@@ -36,14 +36,22 @@ public class KafkaConsumerService implements ConsumerSeekAware {
     private String topicName;
 
     @Value("${spring.kafka.consumer.group-id:xp-marketdata-service-group}")
-    private String groupId;
+    private String defaultGroupId;
+    
+    private String groupId; // Will be set from acquired lease
 
     @PostConstruct
     public void init() {
+        // Use acquired consumer group name from lease, or fallback to default
+        groupId = App.acquiredConsumerGroupName != null 
+                ? App.acquiredConsumerGroupName 
+                : defaultGroupId;
+        
         log.info("========================================");
         log.info("KafkaConsumerService initialized");
         log.info("  Topic: '{}'", topicName);
-        log.info("  Group ID: '{}'", groupId);
+        log.info("  Group ID: '{}' (acquired from lease: {})", 
+                groupId, App.acquiredConsumerGroupName != null ? "YES" : "NO - using default");
         log.info("  Container Factory: 'kafkaListenerContainerFactory'");
         log.info("  Auto-offset-reset: latest (will only consume NEW messages after consumer starts)");
         log.info("  ConsumerSeekAware: Will explicitly seek to END of partitions on startup");
@@ -84,7 +92,6 @@ public class KafkaConsumerService implements ConsumerSeekAware {
      */
     @KafkaListener(
         topics = "${spring.kafka.topic.ohlcv:ohlcv-topic}", 
-        groupId = "${spring.kafka.consumer.group-id:xp-marketdata-service-group}",
         containerFactory = "kafkaListenerContainerFactory"
     )
     public void consumeCandlesCollection(

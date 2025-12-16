@@ -1,5 +1,6 @@
 package ca.digilogue.xp.config;
 
+import ca.digilogue.xp.App;
 import ca.digilogue.xp.generator.OhlcvCandle;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.common.serialization.StringDeserializer;
@@ -8,6 +9,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.DependsOn;
 import org.springframework.kafka.config.ConcurrentKafkaListenerContainerFactory;
 import org.springframework.kafka.core.ConsumerFactory;
 import org.springframework.kafka.core.DefaultKafkaConsumerFactory;
@@ -32,10 +34,22 @@ public class KafkaConfig {
     private String bootstrapServers;
 
     @Value("${spring.kafka.consumer.group-id:xp-marketdata-service-group}")
-    private String groupId;
+    private String defaultGroupId;
 
     @Bean
+    @DependsOn("leaseAcquisitionConfig")
     public ConsumerFactory<String, Map<String, OhlcvCandle>> consumerFactory() {
+        // Use acquired consumer group name from lease (should be set by LeaseAcquisitionConfig)
+        String groupId = App.acquiredConsumerGroupName != null 
+                ? App.acquiredConsumerGroupName 
+                : defaultGroupId;
+        
+        if (App.acquiredConsumerGroupName == null) {
+            log.warn("ConsumerFactory created but lease not acquired - using default group-id: {}", defaultGroupId);
+        } else {
+            log.info("ConsumerFactory using acquired consumer group: {}", App.acquiredConsumerGroupName);
+        }
+        
         Map<String, Object> configProps = new HashMap<>();
         configProps.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
         configProps.put(ConsumerConfig.GROUP_ID_CONFIG, groupId);
