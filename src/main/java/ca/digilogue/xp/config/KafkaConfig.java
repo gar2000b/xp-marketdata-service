@@ -37,7 +37,7 @@ public class KafkaConfig {
     private String defaultGroupId;
 
     @Bean
-    @DependsOn("leaseAcquisitionConfig")
+    @DependsOn("leaseAcquisition")
     public ConsumerFactory<String, Map<String, OhlcvCandle>> consumerFactory() {
         // Use acquired consumer group name from lease (should be set by LeaseAcquisitionConfig)
         String groupId = App.acquiredConsumerGroupName != null 
@@ -66,19 +66,36 @@ public class KafkaConfig {
         
         log.info("Creating ConsumerFactory for live streaming:");
         log.info("  bootstrap-servers: {}", bootstrapServers);
-        log.info("  group-id: {}", groupId);
+        log.info("  group-id: {} (from lease: {})", groupId, App.acquiredConsumerGroupName != null ? "YES" : "NO - using default");
         log.info("  auto-offset-reset: latest (consume NEW messages only)");
         log.info("  enable-auto-commit: false (no offset commits)");
+        
+        // Verify the group ID is actually set in the config
+        Object configuredGroupId = configProps.get(ConsumerConfig.GROUP_ID_CONFIG);
+        if (!groupId.equals(configuredGroupId)) {
+            log.error("CRITICAL: Group ID mismatch! Expected: {}, but config has: {}", groupId, configuredGroupId);
+        } else {
+            log.info("  ✓ Group ID verified in ConsumerConfig: {}", configuredGroupId);
+        }
         
         // Use custom deserializer for Map<String, OhlcvCandle>
         CandlesMapDeserializer candlesMapDeserializer = new CandlesMapDeserializer();
         
-        return new DefaultKafkaConsumerFactory<>(configProps, 
-            new StringDeserializer(), 
-            candlesMapDeserializer);
+        DefaultKafkaConsumerFactory<String, Map<String, OhlcvCandle>> factory = 
+            new DefaultKafkaConsumerFactory<>(configProps, 
+                new StringDeserializer(), 
+                candlesMapDeserializer);
+        
+        // Double-check the factory has the correct group ID
+        Map<String, Object> factoryConfig = factory.getConfigurationProperties();
+        Object factoryGroupId = factoryConfig.get(ConsumerConfig.GROUP_ID_CONFIG);
+        log.info("  ✓ ConsumerFactory created with group-id: {} (verified)", factoryGroupId);
+        
+        return factory;
     }
 
     @Bean
+    @DependsOn("leaseAcquisition")
     public ConcurrentKafkaListenerContainerFactory<String, Map<String, OhlcvCandle>> kafkaListenerContainerFactory() {
         ConcurrentKafkaListenerContainerFactory<String, Map<String, OhlcvCandle>> factory = 
             new ConcurrentKafkaListenerContainerFactory<>();

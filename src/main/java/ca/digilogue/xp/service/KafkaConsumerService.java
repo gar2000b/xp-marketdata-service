@@ -15,6 +15,7 @@ import org.springframework.kafka.support.Acknowledgment;
 import org.springframework.kafka.support.KafkaHeaders;
 import org.springframework.messaging.handler.annotation.Header;
 import org.springframework.messaging.handler.annotation.Payload;
+import org.springframework.context.annotation.DependsOn;
 import org.springframework.stereotype.Service;
 
 import java.util.Map;
@@ -27,6 +28,7 @@ import java.util.Map;
  * on startup, ensuring only NEW messages are consumed (live streaming).
  */
 @Service
+@DependsOn("leaseAcquisition")
 public class KafkaConsumerService implements ConsumerSeekAware {
 
     private static final Logger log = LoggerFactory.getLogger(KafkaConsumerService.class);
