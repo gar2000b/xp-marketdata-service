@@ -2,6 +2,7 @@ package ca.digilogue.xp.service;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
@@ -18,6 +19,9 @@ public class LeaseKeepAliveService {
 
     private final ConsumerGroupLeaseService leaseService;
 
+    @Value("${app.lease.renewal.interval.seconds:20}")
+    private int renewalIntervalSeconds;
+
     public LeaseKeepAliveService(ConsumerGroupLeaseService leaseService) {
         this.leaseService = leaseService;
     }
@@ -28,9 +32,10 @@ public class LeaseKeepAliveService {
      * The renewal interval should be less than the lease duration to ensure
      * the lease never expires while the service is healthy.
      * 
-     * Uses SpEL to convert seconds to milliseconds for @Scheduled annotation.
+     * Note: fixedDelayString uses SpEL to convert seconds to milliseconds.
+     * The property must be set (no default in SpEL to avoid parsing issues).
      */
-    @Scheduled(fixedDelayString = "#{${app.lease.renewal.interval.seconds:20} * 1000}")
+    @Scheduled(fixedDelayString = "#{${app.lease.renewal.interval.seconds} * 1000}")
     public void keepLeaseAlive() {
         try {
             boolean renewed = leaseService.renewLease();
